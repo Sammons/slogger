@@ -1,5 +1,5 @@
 {
-  "name": "slogger",
+  "name": "yet-another-logger",
   "maintainers": [
     "sammons"
   ],
@@ -34,5 +34,8 @@
   "devDependencies": {
     "@types/winston": "^2.3.6",
     "typescript": "^2.5.3"
-  }
+  },
+  "files": [
+    "built"
+  ]
 }
