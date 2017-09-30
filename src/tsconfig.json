@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "outDir": "../built",
+        "target": "es6",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "forceConsistentCasingInFileNames": true,
+        "inlineSourceMap": true,
+        "inlineSources": true,
+        "declaration": true
+    }
+}

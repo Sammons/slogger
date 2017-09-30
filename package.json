@@ -1,0 +1,38 @@
+{
+  "name": "slogger",
+  "maintainers": [
+    "sammons"
+  ],
+  "version": "0.0.2",
+  "engines": {
+    "node": "6.x.x"
+  },
+  "description": "typescript logger based on winston",
+  "main": "built/index.js",
+  "scripts": {
+    "test": "test",
+    "build": "tsc -p src",
+    "prepublish": "rm -rf ./built && tsc -p src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/sammons/slogger"
+  },
+  "keywords": [
+    "logging",
+    "typescript",
+    "node.js",
+    "javascript",
+    "microservices"
+  ],
+  "author": "sammons",
+  "license": "MIT",
+  "dependencies": {
+    "winston": "^2.3.1",
+    "winston-daily-rotate-file": "^1.7.2"
+  },
+  "devDependencies": {
+    "@types/winston": "^2.3.6",
+    "typescript": "^2.5.3"
+  }
+}
