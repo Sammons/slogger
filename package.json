@@ -1,5 +1,5 @@
 {
-  "name": "yet-another-logger",
+  "name": "sammons-logger",
   "maintainers": [
     "sammons"
   ],
@@ -12,7 +12,7 @@
   "scripts": {
     "test": "test",
     "build": "tsc -p src",
-    "prepublish": "rm -rf ./built && tsc -p src"
+    "prepublishOnly": "rm -rf ./built && tsc -p src"
   },
   "repository": {
     "type": "git",
@@ -36,6 +36,7 @@
     "typescript": "^2.5.3"
   },
   "files": [
+    "index.d.ts",
     "built"
   ]
 }
