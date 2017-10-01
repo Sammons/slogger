@@ -1,14 +1,14 @@
-  import * as winston from "winston";
+import * as winston from "winston";
 import "winston-daily-rotate-file";
-import * as os from 'os';
-import * as path from 'path';
-import * as fs from 'fs';
+import * as os from "os";
+import * as path from "path";
+import * as fs from "fs";
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
 
 export interface LogSubscriber {
   level: LogLevel;
-  handler: (...args) => any
+  handler: (...args) => any;
 }
 
 export interface LoggerFactoryOptions {
@@ -22,30 +22,34 @@ export interface LoggerFactoryOptions {
   createTree?: boolean;
   zippedarchive?: boolean;
 }
-const cwdName = process.cwd().split(path.sep).pop() || 'root';
-const cwd = 
-process.mainModule ?
-process.mainModule.filename.split(path.sep).slice(0, -1).join(path.sep) :
-'./';
-
+const cwdName =
+  process
+    .cwd()
+    .split(path.sep)
+    .pop() || "root";
+const cwd = process.mainModule
+  ? process.mainModule.filename
+      .split(path.sep)
+      .slice(0, -1)
+      .join(path.sep)
+  : "./";
 
 const staticDetails = {
   platform: os.platform(),
   arch: os.arch(),
   pid: process.pid
-}
+};
 
 const defaultOptions: LoggerFactoryOptions = {
-  filename: path.resolve(cwd, 'logging/' + cwdName + '@' + os.hostname()),
+  filename: path.resolve(cwd, "logging/" + cwdName + "@" + os.hostname()),
   prepend: true,
   datePattern: "yyyy-MM/yyyy-MM-dd-ddd-",
   localTime: false,
   maxDays: 1,
   createTree: true,
   zippedarchive: false,
-  level: 'debug'
+  level: "debug"
 };
-
 
 export interface LoggerOptions {
   subject: string;
@@ -55,14 +59,14 @@ export type ILogger = {
   [K in LogLevel]: (message: string, meta?: object | Error) => void
 };
 
-const levels = ['debug', 'info', 'warn', 'error'];
+const levels = ["debug", "info", "warn", "error"];
 
 function captureMakeCallerLocation() {
-  const e = new Error()
-  const stack = e.stack || '';
-  const lines = stack.split('\n')
-  const fileMatch = (lines[3] || 'none').match(/\((\/.*?)\:/)
-  return fileMatch ? fileMatch[1] : 'none';
+  const e = new Error();
+  const stack = e.stack || "";
+  const lines = stack.split("\n");
+  const fileMatch = (lines[3] || "none").match(/\((\/.*?)\:/);
+  return fileMatch ? fileMatch[1] : "none";
 }
 
 function captureSystemInfo() {
@@ -79,7 +83,7 @@ function captureSystemInfo() {
     userInfo: os.userInfo(),
     tmpdir: os.tmpdir(),
     homedir: os.homedir()
-  }
+  };
 }
 
 export class LoggerFactory {
@@ -87,14 +91,14 @@ export class LoggerFactory {
   private _logger: winston.LoggerInstance;
   async finish() {
     return new Promise((resolve, reject) => {
-      this._logger.info('Shutting down logger', (error) => {
+      this._logger.info("Shutting down logger", error => {
         if (error) {
-          return reject(error)
+          return reject(error);
         }
-        this._logger.close()
-        return resolve(this)
-      })
-    })
+        this._logger.close();
+        return resolve(this);
+      });
+    });
   }
   initialize(options?: LoggerFactoryOptions) {
     this._options = Object.assign({}, defaultOptions || {}, options);
@@ -105,21 +109,28 @@ export class LoggerFactory {
         json: false,
         level: this._options.level,
         prettyPrint: true,
-        depth: 3
+        depth: 4
       })
     ];
     this._logger = new winston.Logger({
       transports
     });
-    const dir = this._logger.transports.dailyRotateFile['dirname'];
+    const dir = this._logger.transports.dailyRotateFile["dirname"];
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir)
+      fs.mkdirSync(dir);
     }
-    return this
+    return this;
   }
   private _subscribers: LogSubscriber[] = [];
   private _subscriptions: {
-    [K in LogLevel]: Array<(level: LogLevel, message: string, subject: string, meta: {} | Error) => any|void>
+    [K in LogLevel]: Array<
+      (
+        level: LogLevel,
+        message: string,
+        subject: string,
+        meta: {} | Error
+      ) => any | void
+    >
   } = {
     debug: [],
     error: [],
@@ -130,35 +141,114 @@ export class LoggerFactory {
 
   subscribe(subscriber: LogSubscriber) {
     this._subscribers.push(subscriber);
-    this._subscriptions[subscriber.level].push((...args) => subscriber.handler(...args));
+    this._subscriptions[subscriber.level].push((...args) =>
+      subscriber.handler(...args)
+    );
   }
+  saneSerializeError = (e: Error, observed: WeakSet<{}>) => {
+    console.log("serialize error", typeof e);
+    if (observed.has(e)) {
+      return "Cycle [Error Object]";
+    }
+    observed.add(e);
+    const keys = Object.keys(e);
+    const clone = {};
+    keys.forEach(
+      k => (clone[k] = this.preprocessSpecificTypes(e[k], observed))
+    );
+    e.message && (clone["message"] = e.message);
+    e.stack && (clone["stack"] = e.stack.split("\n"));
+    e.name && (clone["name"] = e.name);
+    return clone;
+  };
+
+  preprocessSpecificTypes = (
+    meta: {} | Error | Buffer | RegExp,
+    observed: WeakSet<{}>
+  ) => {
+    console.log("specific serialize", typeof meta);
+    if (meta instanceof Error) {
+      return this.saneSerializeError(meta, observed);
+    }
+    if (Buffer.isBuffer(meta)) {
+      if (meta.byteLength > 1024 * 50) {
+        return { b64: `Buffer Size Too Large ${meta.byteLength} bytes` };
+      }
+      return { buffer: meta.toString("base64") };
+    }
+    if (meta instanceof RegExp) {
+      return meta.toString();
+    }
+    if (meta instanceof Date) {
+      return meta.toISOString();
+    }
+    if (Array.isArray(meta)) {
+      if (meta.length > 1) {
+        return {
+          ArraySample: {
+            length: meta.length,
+            first: this.preprocessSpecificTypes(meta[0], observed),
+            last: this.preprocessSpecificTypes(meta[meta.length -1], observed)
+          }
+        };
+      } else {
+        return meta.map(el => this.preprocessSpecificTypes(el, observed));
+      }
+    }
+    if (typeof meta === "object") {
+      return this.preprocess(meta, observed);
+    }
+    return meta;
+  };
+
+  preprocess = (meta: {} | Error | Buffer | RegExp, observed?: WeakSet<{}>) => {
+    console.log("preprocess", typeof meta);
+    observed = observed || new WeakSet();
+    if (typeof meta === "object") {
+      if (observed.has(meta)) {
+        return "Cycle [Object]";
+      }
+      observed.add(meta);
+      const keys = Object.keys(meta);
+      keys.length > 100 && (meta["__keys"] = keys);
+      keys.forEach(k => {
+        meta[k] = this.preprocessSpecificTypes(meta[k], observed);
+      });
+    }
+    return meta;
+  };
 
   log = (level: LogLevel, subject, message: string, meta: {} | Error) => {
+    const processedMeta = this.preprocess(meta || {});
     const t = new Date();
     const m: any = {
       level,
       subject,
-      meta: meta || {},
+      meta: processedMeta,
       message,
       time: t.toISOString(),
       local: t.toLocaleTimeString()
-    }
-    if (level === 'fatal' || level === 'error') {
+    };
+    if (level === "fatal" || level === "error") {
       m.system = captureSystemInfo();
     }
     this._logger.log(level, message, m);
-    for (let s of this._subscriptions[level]) { s(level, message, subject, m); }
-  }
+    for (let s of this._subscriptions[level]) {
+      s(level, message, subject, m);
+    }
+  };
 
   make(subject?: string): ILogger {
     subject = subject || captureMakeCallerLocation();
     return {
-      debug: (msg: string, m?: {} | Error) => this.log('debug', subject, msg, m),
-      info:(msg: string, m?: {} | Error) =>  this.log('info', subject, msg, m),
-      warn:(msg: string, m?: {} | Error) =>  this.log('warn', subject, msg, m),
-      error: (msg: string, m?: {} | Error) => this.log('error', subject, msg, m),
-      fatal: (msg: string, m?: {} | Error) => this.log('fatal', subject, msg, m)
-    }
+      debug: (msg: string, m?: {} | Error) =>
+        this.log("debug", subject, msg, m),
+      info: (msg: string, m?: {} | Error) => this.log("info", subject, msg, m),
+      warn: (msg: string, m?: {} | Error) => this.log("warn", subject, msg, m),
+      error: (msg: string, m?: {} | Error) =>
+        this.log("error", subject, msg, m),
+      fatal: (msg: string, m?: {} | Error) => this.log("fatal", subject, msg, m)
+    };
   }
 }
 
