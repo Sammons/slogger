@@ -146,7 +146,6 @@ export class LoggerFactory {
     );
   }
   saneSerializeError = (e: Error, observed: WeakSet<{}>) => {
-    console.log("serialize error", typeof e);
     if (observed.has(e)) {
       return "Cycle [Error Object]";
     }
@@ -166,7 +165,6 @@ export class LoggerFactory {
     meta: {} | Error | Buffer | RegExp,
     observed: WeakSet<{}>
   ) => {
-    console.log("specific serialize", typeof meta);
     if (meta instanceof Error) {
       return this.saneSerializeError(meta, observed);
     }
@@ -202,7 +200,6 @@ export class LoggerFactory {
   };
 
   preprocess = (meta: {} | Error | Buffer | RegExp, observed?: WeakSet<{}>) => {
-    console.log("preprocess", typeof meta);
     observed = observed || new WeakSet();
     if (typeof meta === "object") {
       if (observed.has(meta)) {
