@@ -12,6 +12,7 @@ export interface LogSubscriber {
 }
 
 export interface LoggerFactoryOptions {
+  customTransports?: any[];
   filename?: string;
   prepend?: boolean;
   // https?://github.com/winstonjs/winston-daily-rotate-file
@@ -41,6 +42,7 @@ const staticDetails = {
 };
 
 const defaultOptions: LoggerFactoryOptions = {
+  customTransports: [],
   filename: path.resolve(cwd, "logging/" + cwdName + "@" + os.hostname()),
   prepend: true,
   datePattern: "yyyy-MM/yyyy-MM-dd-ddd-",
@@ -102,22 +104,28 @@ export class LoggerFactory {
   }
   initialize(options?: LoggerFactoryOptions) {
     this._options = Object.assign({}, defaultOptions || {}, options);
-    const transports = [
-      new winston.transports.DailyRotateFile(this._options),
-      new winston.transports.Console({
-        colorize: true,
-        json: false,
-        level: this._options.level,
-        prettyPrint: true,
-        depth: 4
+    if (!this._options.customTransports) {
+      const transports = [
+        new winston.transports.DailyRotateFile(this._options),
+        new winston.transports.Console({
+          colorize: true,
+          json: false,
+          level: this._options.level,
+          prettyPrint: true,
+          depth: 4
+        })
+      ];
+      this._logger = new winston.Logger({
+        transports
+      });
+      const dir = this._logger.transports.dailyRotateFile["dirname"];
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+      }
+    } else {
+      this._logger = new winston.Logger({
+        transports: this._options.customTransports
       })
-    ];
-    this._logger = new winston.Logger({
-      transports
-    });
-    const dir = this._logger.transports.dailyRotateFile["dirname"];
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
     }
     return this;
   }
@@ -169,7 +177,7 @@ export class LoggerFactory {
       return this.saneSerializeError(meta, observed);
     }
     if (Buffer.isBuffer(meta)) {
-      if (meta.byteLength > 1024 * 50) {
+      if (meta.byteLength > 1024) {
         return { b64: `Buffer Size Too Large ${meta.byteLength} bytes` };
       }
       return { buffer: meta.toString("base64") };
@@ -186,7 +194,7 @@ export class LoggerFactory {
           ArraySample: {
             length: meta.length,
             first: this.preprocessSpecificTypes(meta[0], observed),
-            last: this.preprocessSpecificTypes(meta[meta.length -1], observed)
+            last: this.preprocessSpecificTypes(meta[meta.length - 1], observed)
           }
         };
       } else {

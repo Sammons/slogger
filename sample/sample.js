@@ -5,7 +5,7 @@ var logging = require("../built/index.js");
 let factory = new logging.LoggerFactory().initialize();
 
 let logger = factory.make();
-let e = new Error("screw off");
+let e = new Error("off");
 e["status"] = 203;
 let s = {  };
 s.me = s;
