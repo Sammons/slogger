@@ -59,6 +59,8 @@ export interface LoggerOptions {
 
 export type ILogger = {
   [K in LogLevel]: (message: string, meta?: object | Error) => void
+} & {
+  pinMeta(key: string, value: any);
 };
 
 const levels = ["debug", "info", "warn", "error"];
@@ -223,7 +225,7 @@ export class LoggerFactory {
     return meta;
   };
 
-  log = (level: LogLevel, subject, message: string, meta: {} | Error) => {
+  log = (pins: {key: string, value: any}[], level: LogLevel, subject, message: string, meta: {} | Error) => {
     const processedMeta = this.preprocess(meta || {});
     const t = new Date();
     const m: any = {
@@ -231,9 +233,15 @@ export class LoggerFactory {
       subject,
       meta: processedMeta,
       message,
+      pins: {},
       time: t.toISOString(),
       local: t.toLocaleTimeString()
     };
+    if (pins.length > 0) {
+      for (let pin of pins) {
+        m.pins[pin.key] = pin.value;
+      }
+    }
     if (level === "fatal" || level === "error") {
       m.system = captureSystemInfo();
     }
@@ -245,14 +253,18 @@ export class LoggerFactory {
 
   make(subject?: string): ILogger {
     subject = subject || captureMakeCallerLocation();
+    const pins: {key: string, value: any}[] = [];
     return {
       debug: (msg: string, m?: {} | Error) =>
-        this.log("debug", subject, msg, m),
-      info: (msg: string, m?: {} | Error) => this.log("info", subject, msg, m),
-      warn: (msg: string, m?: {} | Error) => this.log("warn", subject, msg, m),
+        this.log(pins, "debug", subject, msg, m),
+      info: (msg: string, m?: {} | Error) => this.log(pins, "info", subject, msg, m),
+      warn: (msg: string, m?: {} | Error) => this.log(pins, "warn", subject, msg, m),
       error: (msg: string, m?: {} | Error) =>
-        this.log("error", subject, msg, m),
-      fatal: (msg: string, m?: {} | Error) => this.log("fatal", subject, msg, m)
+        this.log(pins, "error", subject, msg, m),
+      fatal: (msg: string, m?: {} | Error) => this.log(pins, "fatal", subject, msg, m),
+      pinMeta: (key: string, value: any) => {
+        pins.push({ key, value })
+      }
     };
   }
 }
