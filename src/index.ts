@@ -211,7 +211,7 @@ export class LoggerFactory {
 
   preprocess = (meta: {} | Error | Buffer | RegExp, observed?: WeakSet<{}>) => {
     observed = observed || new WeakSet();
-    if (typeof meta === "object") {
+    if (typeof meta === "object" && meta !== null) {
       if (observed.has(meta)) {
         return "Cycle [Object]";
       }
