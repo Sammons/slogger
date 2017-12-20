@@ -206,6 +206,9 @@ export class LoggerFactory {
     if (typeof meta === "object") {
       return this.preprocess(meta, observed);
     }
+    if (typeof meta === 'function') {
+      return 'Function ' + (meta['name'] || 'Lambda');
+    }
     return meta;
   };
 

@@ -1,8 +1,10 @@
 //@ts-check
 "use strict";
 var logging = require("../built/index.js");
-
-let factory = new logging.LoggerFactory().initialize();
+var winston = require("winston");
+let factory = new logging.LoggerFactory().initialize({
+  customTransports: [new winston.transports.Console({level: 'debug'})]
+});
 
 let logger = factory.make();
 let e = new Error("off");
@@ -20,6 +22,11 @@ e["req"] = {
 };
 logger.debug("hi guys", e);
 
-setInterval(() => {
-  logger.debug("hi");
-}, 1000);
+function S() {
+  logger.info('uh oh', {s: S})
+}
+
+S();
+// setInterval(() => {
+//   logger.debug("hi");
+// }, 1000);
