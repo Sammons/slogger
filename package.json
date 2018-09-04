@@ -10,9 +10,11 @@
   "description": "typescript logger based on winston",
   "main": "built/index.js",
   "scripts": {
-    "test": "test",
-    "build": "tsc -p src",
-    "prepublishOnly": "rm -rf ./built && tsc -p src"
+    "coverage": "nyc --all --reporter=lcov --exclude-after-remap=false npm test",
+    "test": "mocha --require source-map-support/register ./built/test/**/*-test.js",
+    "build": "tsc --build --watch ./test",
+    "build-sync": "rm -rf built && tsc --build ./test",
+    "prepublishOnly": "rm -rf ./built && tsc --build ./src"
   },
   "repository": {
     "type": "git",
@@ -28,12 +30,23 @@
   "author": "sammons",
   "license": "MIT",
   "dependencies": {
-    "winston": "^2.3.1",
-    "winston-daily-rotate-file": "^1.7.2"
+    "source-map-support": "^0.5.9",
+    "winston": "^3.0.0",
+    "winston-daily-rotate-file": "^3.3.2"
   },
   "devDependencies": {
-    "@types/winston": "^2.3.6",
-    "typescript": "^2.5.3"
+    "@types/chai": "^4.1.4",
+    "@types/express": "^4.16.0",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^10.9.4",
+    "@types/sinon": "^5.0.2",
+    "chai": "^4.1.2",
+    "express": "^4.16.3",
+    "mocha": "^5.2.0",
+    "sinon": "^6.1.5",
+    "tslint": "^5.11.0",
+    "tslint-language-service": "^0.9.9",
+    "typescript": "^3.0.3"
   },
   "files": [
     "index.d.ts",

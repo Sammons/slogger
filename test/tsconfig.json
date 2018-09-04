@@ -6,13 +6,14 @@
     "strict": true,
     "declaration": true,
     "inlineSourceMap": true,
-    "outDir": "../built/src",
+    "outDir": "../built/test",
     "experimentalDecorators": true,
     "module": "commonjs",
     "moduleResolution": "node",
-    "plugins": [{ "name": "tslint-language-service", "configFile": "../tslint.json" }],
     "types": ["mocha", "node"],
-    "composite": true
+    "composite": true,
+    "watch": true
   },
-  "exclude": ["node_modules", "out"]
+  "exclude": ["node_modules", "out"],
+  "references": [{ "path": "../src" }]
 }

@@ -1,6 +1,14 @@
 {
-    "editor.insertSpaces": true,
-    "editor.tabSize": 2,
-    "editor.renderWhitespace": "all",
-    "editor.renderControlCharacters": true
+  "prettier.tslintIntegration": true,
+  "tslint.autoFixOnSave": true,
+  "editor.formatOnSave": true,
+  "typescript.format.enable": false,
+  "prettier.arrowParens": "always",
+  "prettier.bracketSpacing": true,
+  "prettier.printWidth": 120,
+  "prettier.proseWrap": "preserve",
+  "prettier.tabWidth": 2,
+  "prettier.semi": true,
+  "prettier.singleQuote": false,
+  "typescript.preferences.quoteStyle": "double"
 }
