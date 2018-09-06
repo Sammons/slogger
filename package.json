@@ -1,20 +1,25 @@
 {
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/package.json",
   "name": "sammons-logger",
+  "readme": "README.md",
   "maintainers": [
     "sammons"
   ],
-  "version": "0.0.9",
+  "version": "1.0.0",
   "engines": {
-    "node": "6.x.x"
+    "node": "8.x.x"
   },
   "description": "typescript logger based on winston",
   "main": "built/index.js",
   "scripts": {
-    "coverage": "nyc --all --reporter=lcov --exclude-after-remap=false npm test",
+    "clean": "rm -rf built",
+    "coverage": "nyc --all --reporter=lcov --exclude-after-remap=false npm run --silent test",
     "test": "mocha --require source-map-support/register ./built/test/**/*-test.js",
-    "build": "tsc --build --watch ./test",
-    "build-sync": "rm -rf built && tsc --build ./test",
-    "prepublishOnly": "rm -rf ./built && tsc --build ./src"
+    "build": "tsc --watch -p .",
+    "run-lint": "tslint -p .",
+    "build-sync": "rm -rf built && tsc -p .",
+    "produce": "npm run --silent run-lint && npm run --silent build-sync && npm run --silent coverage && rm -rf built/test",
+    "prepublishOnly": "rm -rf ./built && tsc -p ."
   },
   "repository": {
     "type": "git",
@@ -30,26 +35,33 @@
   "author": "sammons",
   "license": "MIT",
   "dependencies": {
-    "source-map-support": "^0.5.9",
-    "winston": "^3.0.0",
-    "winston-daily-rotate-file": "^3.3.2"
+    "winston": "^3.1.0",
+    "winston-daily-rotate-file": "^3.3.2",
+    "winston-transport": "^4.2.0"
+  },
+  "bugs": {
+    "email": "bugs@sammons.io",
+    "url": "https://github.com/sammons/slogger"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.5.24",
     "@types/chai": "^4.1.4",
     "@types/express": "^4.16.0",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.9.4",
     "@types/sinon": "^5.0.2",
+    "bluebird": "^3.5.2",
     "chai": "^4.1.2",
     "express": "^4.16.3",
     "mocha": "^5.2.0",
-    "sinon": "^6.1.5",
+    "sinon": "^6.2.0",
+    "sonarqube-scanner": "^2.1.1",
+    "source-map-support": "^0.5.9",
     "tslint": "^5.11.0",
-    "tslint-language-service": "^0.9.9",
     "typescript": "^3.0.3"
   },
   "files": [
     "index.d.ts",
-    "built"
+    "built/src"
   ]
 }

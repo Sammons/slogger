@@ -5,23 +5,29 @@ export const Preprocessor = new class {
     }
     observed.add(e);
     const keys = Object.keys(e) as Array<keyof typeof e>;
-    const clone = {} as {
+    const clone: {
       message: string;
       name: string;
       stack: string[];
-    };
+    } = {} as any;
     keys.forEach(
       (k: keyof typeof e) =>
         (clone[k] = this.preprocessSpecificTypes(e[k], observed) as any),
     );
-    e.message && (clone.message = e.message);
-    e.stack && (clone.stack = e.stack.split("\n").map((l) => l.trim()));
-    e.name && (clone.name = e.name);
+    if (e.message != null) {
+      clone.message = e.message;
+    }
+    if (e.stack != null) {
+      clone.stack = e.stack.split("\n").map((l) => l.trim());
+    }
+    if (e.name != null) {
+      clone.name = e.name;
+    }
     return clone;
   }
 
   public preprocessSpecificTypes = <
-    T extends {} | Error | Buffer | RegExp | undefined | Function
+    T extends {} | Error | Buffer | RegExp | undefined | (() => void)
   >(
     meta: T,
     observed: WeakSet<{}>,
@@ -62,12 +68,12 @@ export const Preprocessor = new class {
       if (meta.length > 4) {
         return {
           ArraySample: {
+            last: this.preprocessSpecificTypes(meta[meta.length - 1], observed),
             length: meta.length,
             0: this.preprocessSpecificTypes(meta[0], observed),
             1: this.preprocessSpecificTypes(meta[0], observed),
             2: this.preprocessSpecificTypes(meta[0], observed),
             3: this.preprocessSpecificTypes(meta[0], observed),
-            last: this.preprocessSpecificTypes(meta[meta.length - 1], observed),
           },
         };
       } else {
@@ -78,13 +84,18 @@ export const Preprocessor = new class {
       return this.preprocess(meta, observed);
     }
     if (typeof meta === "function") {
-      return "Function " + (meta.name || "Lambda");
+      if (meta.name) {
+        return `Function ${meta.name}`;
+      }
+      return "Function (Lambda)";
     }
     return meta;
   }
 
   public preprocess = <T extends any>(meta: T, observed?: WeakSet<{}>): any => {
-    observed = observed || new WeakSet();
+    if (observed == null) {
+      observed = new WeakSet();
+    }
     if (typeof meta === "object" && meta !== null) {
       if (meta instanceof Error) {
         return this.preprocess({ error: meta }, observed);
@@ -94,7 +105,9 @@ export const Preprocessor = new class {
       }
       observed.add(meta);
       const keys = Object.keys(meta);
-      keys.length > 100 && (meta.__keys = keys);
+      if (keys.length > 100) {
+        meta.__keys = keys;
+      }
       keys.forEach((k) => {
         meta[k] = this.preprocessSpecificTypes(
           meta[k],

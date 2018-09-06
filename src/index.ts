@@ -1,7 +1,9 @@
 import * as os from "os";
+import * as path from "path";
 import * as stream from "stream";
-// import "source-map-support/register";
 import * as winston from "winston";
+import * as winstonDailyRotator from "winston-daily-rotate-file";
+import * as Transport from "winston-transport";
 import { Preprocessor } from "./meta-processor";
 
 function captureMakeCallerLocation() {
@@ -23,14 +25,14 @@ function captureSystemInfo() {
 }
 export interface LogToFileOptions<L extends Levels> {
   path: string;
-  maxSizeMb: number;
+  rotateAfterSizeMb: number;
   level: L;
 }
 
 type Levels = "debug" | "warn" | "info" | "error";
 const levels: Levels[] = ["debug", "warn", "info", "error"];
 
-export type Publisher = (level: string) => Promise<void>;
+export type Publisher = (level: string, chunk: Buffer) => Promise<void>;
 
 export type ILogger<T extends any = void> = {
   [K in Levels]: (message: string, meta?: object | Error) => void
@@ -39,22 +41,19 @@ export type ILogger<T extends any = void> = {
 };
 
 export interface LoggerFactory {
+  logToTransport(transport: Transport): LoggerFactory;
   logSimpleToStdOut<L extends Levels = "debug">(level?: L): LoggerFactory;
   logJsonToStdOut<L extends Levels = "debug">(level?: L): LoggerFactory;
   logToFile<L extends Levels = "debug">(
     opts: LogToFileOptions<L>,
   ): LoggerFactory;
-  logToEventStream<L extends Levels = "debug">(
-    level: L,
-    publisher: Publisher,
-  ): LoggerFactory;
 }
-
+// for development
 const formatForHuman = winston.format((info, opts) => {
   const { subject, pins, m, level, ...rest } = info;
   let { message } = info;
   for (const p of pins) {
-    message = `${p.key}:[${p.value}] ` + message;
+    message = `${p.key}:[${JSON.stringify(p.value)}] ` + message;
   }
   if (level === "error") {
     m.system = captureSystemInfo();
@@ -62,7 +61,7 @@ const formatForHuman = winston.format((info, opts) => {
   message = `${subject}:[${new Date().toISOString()}] ${message}`;
   return { ...rest, message, level, meta: Preprocessor.preprocess(m) };
 });
-
+// for events,
 const formatForMachine = winston.format((info, opts) => {
   const { subject, pins, level, m, message, ...rest } = info;
   const labels = {} as any;
@@ -91,12 +90,16 @@ export class StaticLogger implements LoggerFactory {
   constructor() {
     this.winstonian = winston.createLogger({});
   }
+  public logToTransport(transport: Transport) {
+    this.winstonian.add(transport);
+    return this;
+  }
   public logSimpleToStdOut<L extends Levels = "debug">(
     level?: L,
   ): StaticLogger {
     const passThrough = new stream.PassThrough();
     passThrough.on("data", async (chunk) => {
-      process.nextTick(process.stdout.write, chunk);
+      process.nextTick(() => process.stdout.write(chunk));
     });
     this.winstonian.add(
       new winston.transports.Stream({
@@ -105,6 +108,7 @@ export class StaticLogger implements LoggerFactory {
           formatForHuman(),
           winston.format.simple(),
         ),
+        handleExceptions: false,
         level: level ? level : "debug",
         stream: passThrough,
       }),
@@ -112,30 +116,45 @@ export class StaticLogger implements LoggerFactory {
     return this;
   }
   public logJsonToStdOut<L extends Levels = "debug">(level?: L): StaticLogger {
+    const passThrough = new stream.PassThrough();
+    passThrough.on("data", async (chunk) => {
+      process.nextTick(() => process.stdout.write(chunk));
+    });
     this.winstonian.add(
-      new winston.transports.Console({
+      new winston.transports.Stream({
         eol: os.EOL,
         format: winston.format.combine(
           formatForMachine(),
           winston.format.json(),
         ),
+        handleExceptions: false,
         level: level ? level : "debug",
+        stream: passThrough,
       }),
     );
     return this;
   }
-  public logToFile<L extends Levels>(opts: LogToFileOptions<L>): LoggerFactory {
-    return this;
-  }
-  public logToEventStream<L extends Levels>(
-    level: L,
-    publisher: Publisher,
-  ): LoggerFactory {
+  public logToFile<L extends Levels>(opts: LogToFileOptions<L>): StaticLogger {
+    const pieces = path.parse(opts.path);
+    this.winstonian.add(
+      new winstonDailyRotator({
+        datePattern: "YYYY-MM-DD-HH",
+        dirname: pieces.dir,
+        eol: os.EOL,
+        filename: pieces.base,
+        format: winston.format.combine(
+          formatForMachine(),
+          winston.format.json(),
+        ),
+        level: opts.level,
+        maxSize: `${opts.rotateAfterSizeMb}m`,
+      }),
+    );
     return this;
   }
   public make(subject?: string): ILogger {
     if (subject == null) {
-      subject = captureMakeCallerLocation();
+      subject = captureMakeCallerLocation().replace(process.cwd(), ".");
     }
     const pins: Array<{ key: string; value: any }> = [];
     const made = {
@@ -163,11 +182,3 @@ export class StaticLogger implements LoggerFactory {
     return made;
   }
 }
-/**
- * Context logger allows the dev to take advantage of async hooks
- * to create a context which can store valuable metadata and correlate
- * errors to requests which would not otherwise be possible
- */
-// export class ContextLogger implements LoggerFactory {
-//   constructor() {}
-// }
