@@ -10,7 +10,8 @@
     "node": "8.x.x"
   },
   "description": "typescript logger based on winston",
-  "main": "built/index.js",
+  "main": "built/src/index.js",
+  "types": "built/src/index.d.ts",
   "scripts": {
     "clean": "rm -rf built",
     "coverage": "nyc --all --reporter=lcov --exclude-after-remap=false npm run --silent test",
