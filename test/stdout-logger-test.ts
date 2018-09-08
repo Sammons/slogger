@@ -56,4 +56,29 @@ describe("stdout logger", () => {
       });
     });
   });
+  it("should nest topic to log to stdout correctly", () => {
+    const loggerFactory = new Logging.StaticLogger().logSimpleToStdOut();
+    const wrapper = () => {
+      return loggerFactory.nestedMake(1);
+    };
+    const logger = wrapper();
+    const writeSpy = sandbox.spy(process.stdout, "write");
+    logger.info("hello there");
+    expect(writeSpy.called).to.eq(false); // should not be called yet
+    return bluebird.fromCallback((cb) => {
+      process.nextTick(() => {
+        try {
+          expect(writeSpy.callCount).to.eq(1);
+          expect(writeSpy.getCall(0).args[0].toString()).to.match(
+            /info: .\/test\/stdout-logger-test.ts:\[\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d\d\dZ\] hello there\n/,
+          );
+          return cb(null);
+        } catch (err) {
+          cb(err);
+        } finally {
+          sandbox.restore();
+        }
+      });
+    });
+  });
 });

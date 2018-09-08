@@ -10,8 +10,11 @@ function captureMakeCallerLocation(nesting: number = 0) {
   const e = new Error();
   const stack = e.stack != null ? e.stack : "";
   const lines = stack.split("\n");
-  const fileMatch = (lines[3] ? lines[3] : "none").match(/\((\/.*?)\:/);
-  return fileMatch ? fileMatch[1 + nesting] : "none";
+  const offset = nesting + 3;
+  const fileMatch = (lines[offset] ? lines[offset] : "none").match(
+    /\((\/.*?)\:/,
+  );
+  return fileMatch ? fileMatch[1] : "none";
 }
 
 function captureSystemInfo() {
