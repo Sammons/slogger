@@ -53,7 +53,7 @@ export interface LoggerFactory {
 }
 // for development
 const formatForHuman = winston.format((info, opts) => {
-  const { subject, pins, m, level, ...rest } = info;
+  const { subject, pins, m = {}, level, ...rest } = info;
   let { message } = info;
   for (const p of pins) {
     message = `${p.key}:[${JSON.stringify(p.value)}] ` + message;
@@ -66,7 +66,7 @@ const formatForHuman = winston.format((info, opts) => {
 });
 // for events,
 const formatForMachine = winston.format((info, opts) => {
-  const { subject, pins, level, m, message, ...rest } = info;
+  const { subject, pins, level, m = {}, message, ...rest } = info;
   const labels = {} as any;
   const timestamp = new Date().toISOString();
   for (const p of pins) {
