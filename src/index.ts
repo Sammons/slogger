@@ -6,12 +6,12 @@ import * as winstonDailyRotator from "winston-daily-rotate-file";
 import * as Transport from "winston-transport";
 import { Preprocessor } from "./meta-processor";
 
-function captureMakeCallerLocation() {
+function captureMakeCallerLocation(nesting: number = 0) {
   const e = new Error();
   const stack = e.stack != null ? e.stack : "";
   const lines = stack.split("\n");
   const fileMatch = (lines[3] ? lines[3] : "none").match(/\((\/.*?)\:/);
-  return fileMatch ? fileMatch[1] : "none";
+  return fileMatch ? fileMatch[1 + nesting] : "none";
 }
 
 function captureSystemInfo() {
@@ -151,6 +151,35 @@ export class StaticLogger implements LoggerFactory {
       }),
     );
     return this;
+  }
+  public nestedMake(nesting: number, subject?: string): ILogger {
+    if (subject == null) {
+      subject = captureMakeCallerLocation(nesting).replace(process.cwd(), ".");
+    }
+    const pins: Array<{ key: string; value: any }> = [];
+    const made = {
+      debug: (msg: string, m?: {} | Error) => {
+        this.winstonian.log("debug", msg, { m, subject, pins });
+        return made;
+      },
+      error: (msg: string, m?: {} | Error) => {
+        this.winstonian.log("error", msg, { m, subject, pins });
+        return made;
+      },
+      info: (msg: string, m?: {} | Error) => {
+        this.winstonian.log("info", msg, { m, subject, pins });
+        return made;
+      },
+      label: <K extends string, V>(key: K, value: V) => {
+        pins.push({ key, value });
+        return made;
+      },
+      warn: (msg: string, m?: {} | Error) => {
+        this.winstonian.log("warn", msg, { m, subject, pins });
+        return made;
+      },
+    };
+    return made;
   }
   public make(subject?: string): ILogger {
     if (subject == null) {
